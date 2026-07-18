@@ -1,0 +1,14 @@
+{
+  "account": "YOUR_ACCOUNT_HERE",
+  "password": "YOUR_PASSWORD_HERE",
+  "token": "",
+  "speed": 2.0,
+  "subject_filter": [],
+  "max_advance_days": 3,
+  "target_course_ids": [],
+  "retry_times": 3,
+  "retry_delay": 5,
+  "min_interval": 1.0,
+  "log_level": "INFO",
+  "log_file": "ewt360_auto.log"
+}
