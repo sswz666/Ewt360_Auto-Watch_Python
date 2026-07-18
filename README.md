@@ -15,7 +15,7 @@
 githubfiles/
 ├── ewt360_v2.py        # 主脚本（维护版本，进度上报真实有效）
 ├── ewt360_auto.py      # 早期原型 v1（已废弃，见文件头注释）
-├── config.example.json # 配置模板（复制为 config.json 后填入自己的账号）
+├── config.json         # 配置模板（填入自己的账号密码）
 ├── requirements.txt    # Python 依赖
 ├── .gitignore          # 忽略真实 config.json 与日志
 └── README.md           # 本文件
@@ -26,7 +26,6 @@ githubfiles/
 ## 环境要求
 
 - Python 3.8+
-- 可访问 `ewt360.com` 相关域名的外网环境
 
 ## 安装
 
@@ -36,8 +35,7 @@ pip install -r requirements.txt
 #   依赖：requests、pycryptodomex
 
 # 2. 准备配置文件
-cp config.example.json config.json
-#   然后编辑 config.json，填入你的账号/密码
+编辑 config.json，填入你的账号/密码
 ```
 
 ---
@@ -213,7 +211,7 @@ python ewt360_v2.py watch --hw 123456 --speed 1.5 --debug
 
 本项目仅用于技术学习与研究。请遵守相关法律法规与平台条款。
 
-## 另外
+## 题外话
 
 以上为AI生成，以下为作者留言：
 用了一下午来搞这个代码，没招了，就这样吧，也能用。
