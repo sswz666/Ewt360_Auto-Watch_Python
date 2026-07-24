@@ -7,9 +7,9 @@ EWT360 (升学e网通) 自动化学习脚本 v2.1
 
 核心功能:
   - 账号密码自动登录 (AES-256-CBC + MD5签名)
-  - Token 登录 / 自动续期
+  - Token 登录 / 自动续期 / Token 失效时的手动获取指引
   - 自动发现作业列表 (进行中/已截止/未开始)
-  - 遍历所有日期获取全部未完成课程
+  - 遍历所有日期获取全部未完成视频课程 (自动过滤试卷)
   - 获取真实 courseId (getLessonDetailV2)
   - 模拟观看并通过 monitor/collect/batch 上报进度
     (HMAC-SHA1 签名, 逆向自 mstplayer-v3.0.37.min.js)
@@ -18,10 +18,14 @@ EWT360 (升学e网通) 自动化学习脚本 v2.1
 
 原理说明:
   - 真正更新服务端 playTime 的接口是 bfe.ewt360.com 的
-    /monitor/web/collect/batch (心跳上报), 而非 playbackProgress / record/submit
-  - 该接口使用 HMAC-SHA1 签名: 对排序后的参数串用会话级 secret 做 HMAC
-  - 每批上报使用固定的 stay_time (默认 12000ms), 服务端按 report_time - begin_time
-    独立校验 (≈ stay_time / speed) 并自动累加 playTime
+    /monitor/web/collect/batch (心跳上报)
+  - 该接口使用 HMAC-SHA1 签名: 排序参数 + 会话级 secret -> hmac.hexdigest()
+  - 每批上报使用固定的 stay_time (12000ms), 服务端按 report-begin 独立校验
+  - 课程列表中的 contentType=2 (试卷) 会被自动过滤, 只保留 contentType=1 (视频)
+
+注意事项:
+  - 登录接口可能要求安全验证(code=017129), 此时请用浏览器手动登录
+    获取 token, 再通过 --token 参数传入
 
 依赖:
   pip install -r requirements.txt   # requests, pycryptodomex
@@ -242,6 +246,12 @@ class EWT360Client:
                 self.log(f"登录成功! userId={self.user_id}", "OK")
                 self._fetch_user_info()
                 return True
+            elif data.get("code") == "017129" or "安全验证" in str(data.get("msg", "")):
+                self.log(f"登录失败: 服务器要求安全验证(滑块/验证码)", "ERR")
+                self.log(f"  请用浏览器打开 https://web.ewt360.com 手动登录一次", "WARN")
+                self.log(f"  登录后在浏览器中按F12→Application→Cookies→ewt360.com→复制token字段", "WARN")
+                self.log(f"  然后运行: python ewt360_v2.py menu --token <你的token>", "WARN")
+                return False
             else:
                 self.log(f"登录失败: [{data.get('code')}] {data.get('msg')}", "ERR")
                 return False
@@ -1148,19 +1158,32 @@ def main():
                           debug=debug_mode)
 
     # 登录
+    logged_in = False
     if client.token:
-        if not client.verify_token():
-            print("Token已过期, 重新登录...")
-            if not client.login():
-                sys.exit(1)
-        else:
+        if client.verify_token():
             print("Token有效, 跳过登录")
+            logged_in = True
+        else:
+            print("Token已过期, 尝试重新登录...")
+            if client.login():
+                logged_in = True
+    else:
+        if client.login():
+            logged_in = True
+
+    if not logged_in:
+        print("\n登录失败! 如果遇到安全验证, 请:")
+        print("  1. 用浏览器打开 https://web.ewt360.com 手动登录")
+        print("  2. 登录后 F12 → Application → Cookies → ewt360.com → 复�� token")
+        print("  3. 运行: python ewt360_v2.py menu --token <你的token>")
+        sys.exit(1)
+
     # 确保用户信息已获取 (schoolId, userName 等)
     if not client.school_id:
         client._fetch_user_info()
-    else:
-        if not client.login():
-            sys.exit(1)
+    if not client.school_id:
+        print("无法获取用户信息, 请检查账号状态")
+        sys.exit(1)
 
     # 保存token
     config["token"] = client.token
